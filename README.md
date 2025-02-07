@@ -5,8 +5,8 @@
 This is the repository that contains the front end of Application Form Evaluator.
 
 ## How to run
-- `npm install`
-- `npm run dev`
+- `npm install`: install all packages
+- `npm run dev`: run server (and apply changes as you go)
 
 # React + Vite
 
