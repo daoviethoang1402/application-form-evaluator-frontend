@@ -1,6 +1,12 @@
 # Application Form Evaluator - Front End
 
+## Introduction
+
 This is the repository that contains the front end of Application Form Evaluator.
+
+## How to run
+- `npm install`
+- `npm run dev`
 
 # React + Vite
 
