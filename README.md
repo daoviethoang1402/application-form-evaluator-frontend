@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is the repository that contains the front end of Application Form Evaluator.
+This is the repository that contains the front end of [Application Form Evaluator](https://github.com/daoviethoang1402/application-form-evaluator).
 
 ## How to run
 - `npm install`: install all packages
