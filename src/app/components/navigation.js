@@ -9,19 +9,25 @@ export const Navigation = () => {
             <Link 
             href="/" 
             className={pathname === "/" ? "font-bold mr-4" : "mr-4 text-blue-500"}>
-                Home
+                Resume Parser
             </Link>
             
             <Link 
-            href="/about" 
-            className={pathname === "/about" ? "font-bold mr-4" : "mr-4 text-blue-500"}>
-                About
+            href="/JD_Quantifier" 
+            className={pathname === "/JD_Quantifier" ? "font-bold mr-4" : "mr-4 text-blue-500"}>
+                JD Quantifier
             </Link>
             
             <Link 
-            href="/contact" 
-            className={pathname === "/contact" ? "font-bold mr-4" : "mr-4 text-blue-500"}>
-                Contact
+            href="/Grader_Summarizer" 
+            className={pathname === "/Grader_Summarizer" ? "font-bold mr-4" : "mr-4 text-blue-500"}>
+                Grader & Summarizer
+            </Link>
+
+            <Link 
+            href="/Decision_Maker" 
+            className={pathname === "/Decision_Maker" ? "font-bold mr-4" : "mr-4 text-blue-500"}>
+                Decision Maker
             </Link>
         </nav>
     );
