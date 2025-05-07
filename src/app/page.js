@@ -1,12 +1,19 @@
 'use client';
 import { useState } from 'react';
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+});
 
 export default function HomePage() {
   // const [cvFiles, setCvFiles] = useState(['cv_1.pdf', 'cv_2.pdf']);
   const [formFiles, setFormFiles] = useState(['form_1.xlsx']);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [cvInput, setCvInput] = useState('');
   const [showInput, setShowInput] = useState(false);
+  const [columns, setColumns] = useState([]);
 
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {
@@ -20,8 +27,102 @@ export default function HomePage() {
   };
 
   const handleUpload = (type) => {
-    alert(`Upload ${type} (chưa tích hợp thực tế, chỉ mô phỏng)`);
+    document.getElementById('formUpload').click();
   };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await api.post('/file/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      alert('✅ Upload thành công');
+      setFormFiles([...formFiles, file.name]);
+      setSelectedFile(file.name);
+    } catch (err) {
+      console.error(err);
+      alert('❌ Upload thất bại');
+    }
+  };
+
+  const fetchColumns = async (filename) => {
+    try {
+      const res = await api.post('/file/excel/get-columns', {
+        subpath: 'uploads',
+        filename,
+      });
+      return res.data.columns;
+    } catch (err) {
+      console.error(err);
+      alert('❌ Không lấy được danh sách cột');
+      return [];
+    }
+  };
+
+  const handleSelectFile = async (file) => {
+    setSelectedFile(file);
+    const cols = await fetchColumns(file);
+    setColumns(cols);
+  };
+  
+
+  const removeUnselectedColumns = async (filename, allColumns, selected) => {
+    const toRemove = allColumns.filter((col) => !selected.includes(col));
+
+    try {
+      const res = await api.post('/file/excel/remove-columns', {
+        subpath: 'uploads',
+        filename,
+        columns: toRemove,
+      });
+      console.log(res.data);
+      return res.data.new_file_path;
+    } catch (err) {
+      console.error(err);
+      alert('❌ Không thể xóa các cột');
+      return null;
+    }
+  };
+
+  const parseAll = async (filename) => {
+    try {
+      const res = await api.post('/resume-parser/parse-all', {
+        subpath: 'uploads',
+        filename,
+      });
+      if (res.data.status === 'success') {
+        alert(`✅ Parse thành công: ${res.data.file_path}`);
+      } else {
+        alert(`❌ Lỗi: ${res.data.message}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ Lỗi hệ thống khi parse resume');
+    }
+  };
+
+  const handleFinish = async () => {
+    if (!selectedFile) {
+      alert('❗ Vui lòng chọn một file');
+      return;
+    }
+
+    const allCols = await fetchColumns(selectedFile);
+    if (!allCols.length) return;
+
+    const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
+    if (!newPath) return;
+
+    await parseAll(selectedFile); // hoặc newPath.split('/').pop() nếu file được tạo mới
+  };
+
+
+
 
   return (
     <div className="flex h-screen font-sans bg-gradient-to-br from-[#f8f9fa] to-[#e0f7fa] text-gray-800">
@@ -34,10 +135,11 @@ export default function HomePage() {
         >
           Upload Form
         </button>
+        <input id="formUpload" type="file" accept=".xlsx,.xls" hidden onChange={handleFileChange} />
         {formFiles.map((file) => (
           <div
             key={file}
-            onClick={() => setSelectedFile(file)}
+            onClick={() => handleSelectFile(file)}
             className={`p-2 mb-2 cursor-pointer rounded transition ${
               selectedFile === file ? 'bg-green-100 font-semibold text-green-800' : 'hover:bg-gray-100'
             }`}
@@ -77,51 +179,54 @@ export default function HomePage() {
           </h3>
 
           {/* Checkbox list - luôn hiển thị */}
-          {['Họ tên', 'Email', 'Câu hỏi 1', 'Câu hỏi 2'].map((cat) => (
-            <label key={cat} className="block mb-2 text-md text-gray-800">
+          {columns.map((col) => (
+            <label key={col} className="block mb-2 text-md text-gray-800">
               <input
                 type="checkbox"
                 className="mr-2 accent-purple-500"
-                checked={selectedCategories.includes(cat)}
-                onChange={() => toggleCategory(cat)}
+                checked={selectedCategories.includes(col)}
+                onChange={() => toggleCategory(col)}
               />
-              {cat}
+              {col}
             </label>
           ))}
 
           {/* Textarea - nhập tiêu chí muốn trích từ CV */}
           <div className="mt-6">
             <h4 className="mb-2 text-md font-medium text-purple-600">
-              ✍️ Nhập các tiêu chí cần trích xuất từ CV (ví dụ: kỹ năng, kinh nghiệm...):
+              ✍️ Nhập các tiêu chí cần trích xuất từ CV:
             </h4>
             <textarea
               rows={4}
               className="w-full p-3 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
               placeholder="Ví dụ: Python, React, Thuyết trình, Quản lý thời gian..."
+              value={cvInput}
+              onChange={(e) => setCvInput(e.target.value)}
             ></textarea>
           </div>
 
           {/* Nút Hoàn tất chỉ hiện khi đủ dữ liệu */}
-          {/*selectedCategories.length > 0 && cvInput.trim() !== '' &&*/ (
+          {selectedCategories.length > 0 && cvInput.trim() !== '' && (
             <button
               onClick={() => {
+                if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
+                  const confirmContinue = window.confirm(
+                    "⚠️ Bạn đã bỏ chọn cột 'CV' trong form, nhưng vẫn nhập tiêu chí cần trích từ CV.\n\nPhần nhập này sẽ bị bỏ qua. Bạn có chắc chắn muốn tiếp tục?"
+                  );
+                  if (!confirmContinue) return;
+                }
+              
+                // Nếu xác nhận hoặc không có mâu thuẫn → tiếp tục xử lý
                 alert('✅ Dữ liệu đã sẵn sàng để gửi lên backend!');
-                // TODO: Gọi API tại đây nếu cần
+                handleFinish();
               }}
+            
               className="mt-6 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded shadow"
             >
               ✅ Hoàn tất
             </button>
           )}
         </div>
-
-        {/* Preview */}
-        {selectedFile && (
-          <div className="mt-6 bg-white shadow border-l-4 border-blue-400 p-4 rounded-md">
-            <h3 className="font-bold text-blue-700 text-lg">📜Preview: {selectedFile}</h3>
-            <p className="text-sm text-gray-600 mt-2">Hiển thị nội dung giả lập của file được chọn.</p>
-          </div>
-        )}
       </main>
     </div>
   );
