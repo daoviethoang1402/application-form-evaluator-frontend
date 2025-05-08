@@ -176,6 +176,7 @@ export default function HomePage() {
             Chọn cột giữ lại từ form:
           </h3>
 
+          {/* Checkbox list - luôn hiển thị */}
           {columns.map((col) => (
             <label key={col} className="block mb-2 text-md text-gray-800">
               <input
@@ -187,7 +188,38 @@ export default function HomePage() {
               {col}
             </label>
           ))}
+          
+          {/* Nút Hoàn tất chỉ hiện khi đủ dữ liệu */}
+          {selectedCategories.length > 0 && (
+            <button
+              onClick={async () => {
+              if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
+                const confirmContinue = window.confirm(
+                  "⚠️ Bạn đã bỏ chọn cột 'CV' trong form, nhưng vẫn nhập tiêu chí cần trích từ CV.\n\nPhần nhập này sẽ bị bỏ qua. Bạn có chắc chắn muốn tiếp tục?"
+                );
+                if (!confirmContinue) return;
+              }
 
+              if (!selectedFile) {
+                alert('❗ Vui lòng chọn một file');
+                return;
+              }
+
+              const allCols = await fetchColumns(selectedFile);
+              if (!allCols.length) return;
+
+              const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
+              if (!newPath) return;
+
+                alert('✅ Đã xử lý xong file. Sẵn sàng để parse.');
+              }}
+              className="mt-6 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded shadow mr-4"
+            >
+              ✅ Hoàn tất
+            </button>
+          )}
+
+          {/* Textarea - nhập tiêu chí muốn trích từ CV */}
           <div className="mt-6">
             <h4 className="mb-2 text-md font-medium text-purple-600">
               ✍️ Nhập các tiêu chí cần trích xuất từ CV:
@@ -200,50 +232,22 @@ export default function HomePage() {
               onChange={(e) => setCvInput(e.target.value)}
             ></textarea>
           </div>
+          {cvInput.trim() !== '' && (
+            <button
+            onClick={() => {
+              if (!selectedFile) {
+                alert('❗ Vui lòng chọn một file');
+                return;
+              }
+              parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
+            }}
+            className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
+            >
+            🚀 Parse All
+            </button>
+            )
+          }
 
-          {selectedCategories.length > 0 && cvInput.trim() !== '' && (
-            <>
-              <button
-                onClick={async () => {
-                  if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
-                    const confirmContinue = window.confirm(
-                      "⚠️ Bạn đã bỏ chọn cột 'CV' trong form, nhưng vẫn nhập tiêu chí cần trích từ CV.\n\nPhần nhập này sẽ bị bỏ qua. Bạn có chắc chắn muốn tiếp tục?"
-                    );
-                    if (!confirmContinue) return;
-                  }
-
-                  if (!selectedFile) {
-                    alert('❗ Vui lòng chọn một file');
-                    return;
-                  }
-
-                  const allCols = await fetchColumns(selectedFile);
-                  if (!allCols.length) return;
-
-                  const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
-                  if (!newPath) return;
-
-                  alert('✅ Đã xử lý xong file. Sẵn sàng để parse.');
-                }}
-                className="mt-6 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded shadow mr-4"
-              >
-                ✅ Hoàn tất
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!selectedFile) {
-                    alert('❗ Vui lòng chọn một file');
-                    return;
-                  }
-                  parseAll(selectedFile);
-                }}
-                className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
-              >
-                🚀 Parse All
-              </button>
-            </>
-          )}
         </div>
       </main>
     </div>
