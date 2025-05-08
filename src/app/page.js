@@ -99,6 +99,7 @@ export default function HomePage() {
       alert('✅ Upload thành công');
       setFormFiles([...formFiles, file.name]);
       setSelectedFile(file.name);
+      fetchFiles();
     } catch (err) {
       console.error(err);
       alert('❌ Upload thất bại');
@@ -133,7 +134,49 @@ export default function HomePage() {
       setColumns([]);
     }
   };
-  
+
+  const handleDeleteFile = async (file) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa file ${file}?`)) {
+      try {
+        await api.delete('/file/delete', {
+          params: {
+            subpath: 'uploads',
+            filename: file,
+          },
+        });
+        alert('✅ Xóa thành công');
+        fetchFiles();
+        setColumns([]);
+        setFormFiles(formFiles.filter((f) => f !== file));
+        setSelectedFile(null);
+      } catch (err) {
+        console.error(err);
+        alert('❌ Không thể xóa file');
+      }
+    }
+  }
+  const handleDownloadFile = async (file) => {
+    try {
+      const res = await api.get('/file/download', {
+        params: {
+          subpath: 'uploads',
+          filename: file,
+        },
+        responseType: 'blob', // Để nhận dữ liệu nhị phân
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', file);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(err);
+      alert('❌ Không thể tải file về');
+    }
+  }
 
   const removeUnselectedColumns = async (filename, allColumns, selected) => {
     // const toRemove = allColumns.filter((col) => !selected.includes(col));
@@ -198,6 +241,29 @@ export default function HomePage() {
     <div className="flex h-screen font-sans bg-gradient-to-br from-[#f8f9fa] to-[#e0f7fa] text-gray-800">
       {/* Sidebar Storage */}
         <aside className="w-1/4 border-r border-gray-300 bg-white p-4 overflow-y-auto">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold mb-6 text-center text-indigo-800">File Storage</h1>
+            
+            {selectedFile && (
+              <div className="mb-4 p-2 bg-blue-50 rounded-md border border-blue-200">
+                <p className="text-sm font-semibold text-blue-800">Selected: {selectedFile}</p>
+                <div className="flex mt-2 space-x-2">
+                  <button 
+                    onClick={() => handleDownloadFile(selectedFile)}
+                    className="text-xs bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded"
+                  >
+                    📥 Download
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteFile(selectedFile)}
+                    className="text-xs bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <h2 className="font-bold text-green-600 text-lg mb-2">📤 Uploads</h2>
           <button
             onClick={() => handleUpload('Form')}
