@@ -16,6 +16,60 @@ export default function HomePage() {
   const [showInput, setShowInput] = useState(false);
   const [columns, setColumns] = useState([]);
 
+  const [fileGroups, setFileGroups] = useState({
+    uploads: [],
+    resume_parser: [],
+    jd_quantifier: [],
+    grader_summarizer: [],
+    decision_maker: []
+  });
+
+  const fetchFiles = async () => {
+    try {
+      const response = await api.get('/file/list/');
+      const { files } = response.data;
+      
+      // Organize files into groups
+      const groups = {
+        uploads: [],
+        resume_parser: [],
+        jd_quantifier: [],
+        grader_summarizer: [],
+        decision_maker: []
+      };
+
+      files.forEach(file => {
+        // Only process actual files (not directories)
+        if (!file.includes('.')) return;
+        console.log(file);
+        
+        if (file.startsWith('uploads/')) {
+          groups.uploads.push(file.replace('uploads/', ''));
+        } else if (file.includes('results/resume_parser/')) {
+          groups.resume_parser.push(file.replace('results/resume_parser/', ''));
+        } else if (file.includes('results/jd_quantifier/')) {
+          groups.jd_quantifier.push(file.replace('results/jd_quantifier/', ''));
+        } else if (file.includes('results/grader_summarizer/')) {
+          groups.grader_summarizer.push(file.replace('results/grader_summarizer/', ''));
+        } else if (file.includes('results/decision_maker/')) {
+          groups.decision_maker.push(file.replace('results/decision_maker/', ''));
+        }
+      });
+
+      setFileGroups(groups);
+      
+      // Update form files for consistency with rest of the app
+      setFormFiles(groups.uploads);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+    }
+  };
+
+  // Fetch files on component mount
+  useState(() => {
+    fetchFiles();
+  }, []);
+
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {
       const updated = selectedCategories.filter((c) => c !== cat);
@@ -70,8 +124,14 @@ export default function HomePage() {
 
   const handleSelectFile = async (file) => {
     setSelectedFile(file);
-    const cols = await fetchColumns(file);
-    setColumns(cols);
+    console.log('Selected file path:', file);
+    if (file.endsWith('.xlsx') || file.endsWith('.xls')) {
+      const cols = await fetchColumns(file);
+      setColumns(cols);
+    } else {
+      alert('File có định dạng khác Excel. Hãy tải về để xem thêm.');
+      setColumns([]);
+    }
   };
   
 
@@ -134,52 +194,92 @@ export default function HomePage() {
   //   await parseAll(selectedFile); // hoặc newPath.split('/').pop() nếu file được tạo mới
   // };
 
-
-
-
   return (
     <div className="flex h-screen font-sans bg-gradient-to-br from-[#f8f9fa] to-[#e0f7fa] text-gray-800">
       {/* Sidebar Storage */}
-      <aside className="w-1/4 border-r border-gray-300 bg-white p-4 overflow-y-auto">
-        <h2 className="font-bold text-green-600 text-lg mb-2">📤 Uploads</h2>
-        <button
-          onClick={() => handleUpload('Form')}
-          className="mb-3 text-sm text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded"
-        >
-          Upload Form
-        </button>
-        <input id="formUpload" type="file" accept=".xlsx,.xls" hidden onChange={handleFileChange} />
-        {formFiles.map((file) => (
-          <div
-            key={file}
-            onClick={() => handleSelectFile(file)}
-            className={`p-2 mb-2 cursor-pointer rounded transition ${
-              selectedFile === file ? 'bg-green-100 font-semibold text-green-800' : 'hover:bg-gray-100'
-            }`}
+        <aside className="w-1/4 border-r border-gray-300 bg-white p-4 overflow-y-auto">
+          <h2 className="font-bold text-green-600 text-lg mb-2">📤 Uploads</h2>
+          <button
+            onClick={() => handleUpload('Form')}
+            className="mb-3 text-sm text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded"
           >
-            {file}
-          </div>
-        ))}
-        
-        <hr className="my-4" />        
-        
-        <h2 className="font-bold text-indigo-600 text-lg mb-2">📄 Resume Parser</h2>
-        
+            Upload Form
+          </button>
+          <input id="formUpload" type="file" accept=".xlsx,.xls" hidden onChange={handleFileChange} />
+          {fileGroups.uploads.map((file) => (
+            <div
+          key={file}
+          onClick={() => handleSelectFile(file)}
+          className={`p-2 mb-2 cursor-pointer rounded transition ${
+            selectedFile === file ? 'bg-green-100 font-semibold text-green-800' : 'hover:bg-gray-100'
+          }`}
+            >
+          {file}
+            </div>
+          ))}
+          
+          <hr className="my-4" />        
+          
+          <h2 className="font-bold text-indigo-600 text-lg mb-2">📄 Resume Parser</h2>
+          {fileGroups.resume_parser.map((file) => (
+            <div
+          key={file}
+          onClick={() => handleSelectFile(file)}
+          className={`p-2 mb-2 cursor-pointer rounded transition ${
+            selectedFile === file ? 'bg-blue-100 font-semibold text-blue-800' : 'hover:bg-gray-100'
+          }`}
+            >
+          {file}
+            </div>
+          ))}
+          
+          <hr className="my-4" />        
+          
+          <h2 className="font-bold text-indigo-600 text-lg mb-2">📊 JD Quantifier</h2>
+          {fileGroups.jd_quantifier.map((file) => (
+            <div
+          key={file}
+          onClick={() => handleSelectFile(file)}
+          className={`p-2 mb-2 cursor-pointer rounded transition ${
+            selectedFile === file ? 'bg-purple-100 font-semibold text-purple-800' : 'hover:bg-gray-100'
+          }`}
+            >
+          {file}
+            </div>
+          ))}
 
-        <hr className="my-4" />        
+          <hr className="my-4" />        
+          
+          <h2 className="font-bold text-indigo-600 text-lg mb-2">📝 Grader Summarizer</h2>
+          {fileGroups.grader_summarizer.map((file) => (
+            <div
+          key={file}
+          onClick={() => handleSelectFile(file)}
+          className={`p-2 mb-2 cursor-pointer rounded transition ${
+            selectedFile === file ? 'bg-yellow-100 font-semibold text-yellow-800' : 'hover:bg-gray-100'
+          }`}
+            >
+          {file}
+            </div>
+          ))}
         
-        <h2 className="font-bold text-indigo-600 text-lg mb-2">📊 JD Quantifier</h2>
+          <hr className="my-4" />        
+          
+          <h2 className="font-bold text-indigo-600 text-lg mb-2">🤖 Decision Maker</h2>
+          {fileGroups.decision_maker.map((file) => (
+            <div
+          key={file}
+          onClick={() => handleSelectFile(file)}
+          className={`p-2 mb-2 cursor-pointer rounded transition ${
+            selectedFile === file ? 'bg-pink-100 font-semibold text-pink-800' : 'hover:bg-gray-100'
+          }`}
+            >
+          {file}
+            </div>
+          ))}
+        </aside>
 
-        <hr className="my-4" />        
-        
-        <h2 className="font-bold text-indigo-600 text-lg mb-2">📝 Grader Summarizer</h2>
-      
-        <hr className="my-4" />        
-        
-        <h2 className="font-bold text-indigo-600 text-lg mb-2">🤖 Decision Maker</h2>
-      </aside>
-
-      {/* Main Panel */}
+        {/* Main Panel */}
       <main className="flex-1 p-6">
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="mb-4 text-lg font-semibold text-purple-700 flex items-center gap-2">
