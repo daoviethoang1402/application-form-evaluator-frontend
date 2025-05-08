@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import qs from 'qs';
 
@@ -73,7 +73,7 @@ export default function HomePage() {
   };
 
   // Fetch files on component mount
-  useState(() => {
+  useEffect(() => {
     fetchFiles();
   }, []);
 
@@ -221,6 +221,7 @@ export default function HomePage() {
 
   const parseAll = async (filename) => {
     const [ actualFilename, pathPrefix ] = splitRelativePath(filename);
+    alert('Các câu trả lời đang được xử lý. Vui lòng chờ trong giây lát. Thời gian chờ tùy thuộc vào số lượng ứng viên. Nhấn "OK" để chạy.');
     try {
       const res = await api.get('/resume-parser/parse-all/', {
         params: {
@@ -232,7 +233,6 @@ export default function HomePage() {
       });
       if (res.data.status === 'success') {
         alert(`✅ Parse thành công: ${res.data.file_path}`);
-        fetchFiles();
       } else {
         alert(`❌ Lỗi: ${res.data.message}`);
       }
@@ -240,6 +240,7 @@ export default function HomePage() {
       console.error(err);
       alert('❌ Lỗi hệ thống khi parse resume');
     }
+    fetchFiles();
   };
 
   // const handleFinish = async () => {
@@ -436,7 +437,6 @@ export default function HomePage() {
                 alert('❗ Vui lòng chọn một file');
                 return;
               }
-              alert('Các câu trả lời đang được xử lý. Vui lòng chờ trong giây lát. Thời gian chờ tùy thuộc vào số lượng ứng viên.');
               parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
             }}
             className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
