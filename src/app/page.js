@@ -52,9 +52,12 @@ export default function HomePage() {
 
   const fetchColumns = async (filename) => {
     try {
-      const res = await api.post('/file/excel/get-columns', {
-        subpath: 'uploads',
-        filename,
+      const res = await api.get('/file/excel/get-columns', {
+        params: {
+          subpath: 'uploads',
+          filename: filename,
+          // sheet_name: 'Sheet1'  // nếu cần
+        }
       });
       return res.data.columns;
     } catch (err) {
@@ -72,14 +75,20 @@ export default function HomePage() {
   
 
   const removeUnselectedColumns = async (filename, allColumns, selected) => {
-    const toRemove = allColumns.filter((col) => !selected.includes(col));
-
+    // const toRemove = allColumns.filter((col) => !selected.includes(col));
+    console.log(selected);
     try {
-      const res = await api.post('/file/excel/remove-columns', {
-        subpath: 'uploads',
-        filename,
-        columns: toRemove,
-      });
+      const res = await api.post(
+        '/file/excel/select-columns',
+        null,  // Không có body
+        {
+          params: {
+            subpath: 'uploads',
+            filename,
+            columns: selected,
+          },
+        }
+      );
       console.log(res.data);
       return res.data.new_file_path;
     } catch (err) {
