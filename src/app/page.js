@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import axios from 'axios';
+import qs from 'qs';
 
 const api = axios.create({
   baseURL: '/api',
@@ -86,6 +87,9 @@ export default function HomePage() {
             subpath: 'uploads',
             filename,
             columns: selected,
+          },
+          paramsSerializer: (params) => {
+            return qs.stringify(params, { arrayFormat: 'repeat' }); // xử lý đúng mảng
           },
         }
       );
@@ -195,24 +199,9 @@ export default function HomePage() {
               {col}
             </label>
           ))}
-
-          {/* Textarea - nhập tiêu chí muốn trích từ CV */}
-          <div className="mt-6">
-            <h4 className="mb-2 text-md font-medium text-purple-600">
-              ✍️ Nhập các tiêu chí cần trích xuất từ CV:
-            </h4>
-            <textarea
-              rows={4}
-              className="w-full p-3 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="Ví dụ: Python, React, Thuyết trình, Quản lý thời gian..."
-              value={cvInput}
-              onChange={(e) => setCvInput(e.target.value)}
-            ></textarea>
-          </div>
-
+          
           {/* Nút Hoàn tất chỉ hiện khi đủ dữ liệu */}
-          {selectedCategories.length > 0 && cvInput.trim() !== '' && (
-          <>
+          {selectedCategories.length > 0 && (
             <button
               onClick={async () => {
               if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
@@ -239,21 +228,36 @@ export default function HomePage() {
             >
               ✅ Hoàn tất
             </button>
+          )}
 
+          {/* Textarea - nhập tiêu chí muốn trích từ CV */}
+          <div className="mt-6">
+            <h4 className="mb-2 text-md font-medium text-purple-600">
+              ✍️ Nhập các tiêu chí cần trích xuất từ CV:
+            </h4>
+            <textarea
+              rows={4}
+              className="w-full p-3 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="Ví dụ: Python, React, Thuyết trình, Quản lý thời gian..."
+              value={cvInput}
+              onChange={(e) => setCvInput(e.target.value)}
+            ></textarea>
+          </div>
+          {cvInput.trim() !== '' && (
             <button
-              onClick={() => {
-                if (!selectedFile) {
-                  alert('❗ Vui lòng chọn một file');
-                  return;
-                }
-                parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
-              }}
-              className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
+            onClick={() => {
+              if (!selectedFile) {
+                alert('❗ Vui lòng chọn một file');
+                return;
+              }
+              parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
+            }}
+            className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
             >
-              🚀 Parse All
+            🚀 Parse All
             </button>
-          </>
-        )}
+            )
+          }
 
         </div>
       </main>
