@@ -17,12 +17,20 @@ export default function HomePage() {
   const [columns, setColumns] = useState([]);
 
   const [fileGroups, setFileGroups] = useState({
-    uploads: [],
-    resume_parser: [],
-    jd_quantifier: [],
-    grader_summarizer: [],
-    decision_maker: []
+    "uploads": [],
+    "resume_parser": [],
+    "jd_quantifier": [],
+    "grader_summarizer": [],
+    "decision_maker": []
   });
+
+  const splitRelativePath = (path) => {
+    // Extract filename from path by splitting at the last '/'
+    const parts = path.split('/');
+    const filename = parts.pop(); // Lấy phần cuối cùng
+    const subpath = parts.join('/'); // Lấy phần còn lại
+    return [ filename, subpath ];
+  }
 
   const fetchFiles = async () => {
     try {
@@ -31,35 +39,34 @@ export default function HomePage() {
       
       // Organize files into groups
       const groups = {
-        uploads: [],
-        resume_parser: [],
-        jd_quantifier: [],
-        grader_summarizer: [],
-        decision_maker: []
+        "uploads": [],
+        "resume_parser": [],
+        "jd_quantifier": [],
+        "grader_summarizer": [],
+        "decision_maker": []
       };
 
       files.forEach(file => {
         // Only process actual files (not directories)
         if (!file.includes('.')) return;
-        console.log(file);
         
         if (file.startsWith('uploads/')) {
-          groups.uploads.push(file.replace('uploads/', ''));
+          groups["uploads"].push(file);
         } else if (file.includes('results/resume_parser/')) {
-          groups.resume_parser.push(file.replace('results/resume_parser/', ''));
+          groups["resume_parser"].push(file);
         } else if (file.includes('results/jd_quantifier/')) {
-          groups.jd_quantifier.push(file.replace('results/jd_quantifier/', ''));
+          groups["jd_quantifier"].push(file);
         } else if (file.includes('results/grader_summarizer/')) {
-          groups.grader_summarizer.push(file.replace('results/grader_summarizer/', ''));
+          groups["grader_summarizer"].push(file);
         } else if (file.includes('results/decision_maker/')) {
-          groups.decision_maker.push(file.replace('results/decision_maker/', ''));
+          groups["decision_maker"].push(file);
         }
       });
 
       setFileGroups(groups);
       
       // Update form files for consistency with rest of the app
-      setFormFiles(groups.uploads);
+      setFormFiles(groups["uploads"]);
     } catch (error) {
       console.error('Error fetching files:', error);
     }
@@ -107,11 +114,13 @@ export default function HomePage() {
   };
 
   const fetchColumns = async (filename) => {
+    console.log(filename);
+    const [ actualFilename, pathPrefix ] = splitRelativePath(filename);
     try {
       const res = await api.get('/file/excel/get-columns', {
         params: {
-          subpath: 'uploads',
-          filename: filename,
+          subpath: pathPrefix,
+          filename: actualFilename,
           // sheet_name: 'Sheet1'  // nếu cần
         }
       });
@@ -137,11 +146,12 @@ export default function HomePage() {
 
   const handleDeleteFile = async (file) => {
     if (confirm(`Bạn có chắc chắn muốn xóa file ${file}?`)) {
+      const [ actualFilename, pathPrefix ] = splitRelativePath(file);
       try {
         await api.delete('/file/delete', {
           params: {
-            subpath: 'uploads',
-            filename: file,
+            subpath: pathPrefix,
+            filename: actualFilename,
           },
         });
         alert('✅ Xóa thành công');
@@ -156,11 +166,12 @@ export default function HomePage() {
     }
   }
   const handleDownloadFile = async (file) => {
+    const [ actualFilename, pathPrefix ] = splitRelativePath(file);
     try {
       const res = await api.get('/file/download', {
         params: {
-          subpath: 'uploads',
-          filename: file,
+          subpath: pathPrefix,
+          filename: actualFilename,
         },
         responseType: 'blob', // Để nhận dữ liệu nhị phân
       });
@@ -181,14 +192,16 @@ export default function HomePage() {
   const removeUnselectedColumns = async (filename, allColumns, selected) => {
     // const toRemove = allColumns.filter((col) => !selected.includes(col));
     console.log(selected);
+    const [ actualFilename, pathPrefix ] = splitRelativePath(filename);
     try {
       const res = await api.post(
         '/file/excel/select-columns',
         null,  // Không có body
         {
           params: {
-            subpath: 'uploads',
-            filename,
+            subpath: pathPrefix,
+            filename: actualFilename,
+            // sheet_name: 'Sheet1',  // nếu cần
             columns: selected,
           },
           paramsSerializer: (params) => {
@@ -197,6 +210,7 @@ export default function HomePage() {
         }
       );
       console.log(res.data);
+      fetchFiles();
       return res.data.new_file_path;
     } catch (err) {
       console.error(err);
@@ -206,13 +220,19 @@ export default function HomePage() {
   };
 
   const parseAll = async (filename) => {
+    const [ actualFilename, pathPrefix ] = splitRelativePath(filename);
     try {
-      const res = await api.post('/resume-parser/parse-all', {
-        subpath: 'uploads',
-        filename,
+      const res = await api.get('/resume-parser/parse-all/', {
+        params: {
+          subpath: pathPrefix,
+          filename: actualFilename,
+          // sheet_name: 'Sheet1'  // nếu cần,
+          required_fields: cvInput,
+        }
       });
       if (res.data.status === 'success') {
         alert(`✅ Parse thành công: ${res.data.file_path}`);
+        fetchFiles();
       } else {
         alert(`❌ Lỗi: ${res.data.message}`);
       }
@@ -272,7 +292,7 @@ export default function HomePage() {
             Upload Form
           </button>
           <input id="formUpload" type="file" accept=".xlsx,.xls" hidden onChange={handleFileChange} />
-          {fileGroups.uploads.map((file) => (
+          {fileGroups["uploads"].map((file) => (
             <div
           key={file}
           onClick={() => handleSelectFile(file)}
@@ -280,14 +300,14 @@ export default function HomePage() {
             selectedFile === file ? 'bg-green-100 font-semibold text-green-800' : 'hover:bg-gray-100'
           }`}
             >
-          {file}
+          {file.replace('uploads/', '')}
             </div>
           ))}
           
           <hr className="my-4" />        
           
           <h2 className="font-bold text-indigo-600 text-lg mb-2">📄 Resume Parser</h2>
-          {fileGroups.resume_parser.map((file) => (
+          {fileGroups["resume_parser"].map((file) => (
             <div
           key={file}
           onClick={() => handleSelectFile(file)}
@@ -295,14 +315,14 @@ export default function HomePage() {
             selectedFile === file ? 'bg-blue-100 font-semibold text-blue-800' : 'hover:bg-gray-100'
           }`}
             >
-          {file}
+          {file.replace('results/resume_parser/', '')}
             </div>
           ))}
           
           <hr className="my-4" />        
           
           <h2 className="font-bold text-indigo-600 text-lg mb-2">📊 JD Quantifier</h2>
-          {fileGroups.jd_quantifier.map((file) => (
+          {fileGroups["jd_quantifier"].map((file) => (
             <div
           key={file}
           onClick={() => handleSelectFile(file)}
@@ -310,14 +330,14 @@ export default function HomePage() {
             selectedFile === file ? 'bg-purple-100 font-semibold text-purple-800' : 'hover:bg-gray-100'
           }`}
             >
-          {file}
+          {file.replace('results/jd_quantifier/', '')}
             </div>
           ))}
 
           <hr className="my-4" />        
           
           <h2 className="font-bold text-indigo-600 text-lg mb-2">📝 Grader Summarizer</h2>
-          {fileGroups.grader_summarizer.map((file) => (
+          {fileGroups["grader_summarizer"].map((file) => (
             <div
           key={file}
           onClick={() => handleSelectFile(file)}
@@ -325,14 +345,14 @@ export default function HomePage() {
             selectedFile === file ? 'bg-yellow-100 font-semibold text-yellow-800' : 'hover:bg-gray-100'
           }`}
             >
-          {file}
+          {file.replace('results/grader_summarizer/', '')}
             </div>
           ))}
         
           <hr className="my-4" />        
           
           <h2 className="font-bold text-indigo-600 text-lg mb-2">🤖 Decision Maker</h2>
-          {fileGroups.decision_maker.map((file) => (
+          {fileGroups["decision_maker"].map((file) => (
             <div
           key={file}
           onClick={() => handleSelectFile(file)}
@@ -340,12 +360,12 @@ export default function HomePage() {
             selectedFile === file ? 'bg-pink-100 font-semibold text-pink-800' : 'hover:bg-gray-100'
           }`}
             >
-          {file}
+          {file.replace('results/decision_maker/', '')}
             </div>
           ))}
         </aside>
 
-        {/* Main Panel */}
+      {/* Main Panel */}
       <main className="flex-1 p-6">
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="mb-4 text-lg font-semibold text-purple-700 flex items-center gap-2">
@@ -416,6 +436,7 @@ export default function HomePage() {
                 alert('❗ Vui lòng chọn một file');
                 return;
               }
+              alert('Các câu trả lời đang được xử lý. Vui lòng chờ trong giây lát. Thời gian chờ tùy thuộc vào số lượng ứng viên.');
               parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
             }}
             className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
