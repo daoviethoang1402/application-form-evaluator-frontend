@@ -115,20 +115,20 @@ export default function HomePage() {
     }
   };
 
-  const handleFinish = async () => {
-    if (!selectedFile) {
-      alert('❗ Vui lòng chọn một file');
-      return;
-    }
+  // const handleFinish = async () => {
+  //   if (!selectedFile) {
+  //     alert('❗ Vui lòng chọn một file');
+  //     return;
+  //   }
 
-    const allCols = await fetchColumns(selectedFile);
-    if (!allCols.length) return;
+  //   const allCols = await fetchColumns(selectedFile);
+  //   if (!allCols.length) return;
 
-    const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
-    if (!newPath) return;
+  //   const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
+  //   if (!newPath) return;
 
-    await parseAll(selectedFile); // hoặc newPath.split('/').pop() nếu file được tạo mới
-  };
+  //   await parseAll(selectedFile); // hoặc newPath.split('/').pop() nếu file được tạo mới
+  // };
 
 
 
@@ -216,25 +216,49 @@ export default function HomePage() {
 
           {/* Nút Hoàn tất chỉ hiện khi đủ dữ liệu */}
           {selectedCategories.length > 0 && cvInput.trim() !== '' && (
+          <>
             <button
-              onClick={() => {
-                if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
-                  const confirmContinue = window.confirm(
-                    "⚠️ Bạn đã bỏ chọn cột 'CV' trong form, nhưng vẫn nhập tiêu chí cần trích từ CV.\n\nPhần nhập này sẽ bị bỏ qua. Bạn có chắc chắn muốn tiếp tục?"
-                  );
-                  if (!confirmContinue) return;
-                }
-              
-                // Nếu xác nhận hoặc không có mâu thuẫn → tiếp tục xử lý
-                alert('✅ Dữ liệu đã sẵn sàng để gửi lên backend!');
-                handleFinish();
+              onClick={async () => {
+              if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
+                const confirmContinue = window.confirm(
+                  "⚠️ Bạn đã bỏ chọn cột 'CV' trong form, nhưng vẫn nhập tiêu chí cần trích từ CV.\n\nPhần nhập này sẽ bị bỏ qua. Bạn có chắc chắn muốn tiếp tục?"
+                );
+                if (!confirmContinue) return;
+              }
+
+              if (!selectedFile) {
+                alert('❗ Vui lòng chọn một file');
+                return;
+              }
+
+              const allCols = await fetchColumns(selectedFile);
+              if (!allCols.length) return;
+
+              const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
+              if (!newPath) return;
+
+                alert('✅ Đã xử lý xong file. Sẵn sàng để parse.');
               }}
-            
-              className="mt-6 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded shadow"
+              className="mt-6 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded shadow mr-4"
             >
               ✅ Hoàn tất
             </button>
-          )}
+
+            <button
+              onClick={() => {
+                if (!selectedFile) {
+                  alert('❗ Vui lòng chọn một file');
+                  return;
+                }
+                parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
+              }}
+              className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
+            >
+              🚀 Parse All
+            </button>
+          </>
+        )}
+
         </div>
       </main>
     </div>
