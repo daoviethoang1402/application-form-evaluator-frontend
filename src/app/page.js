@@ -7,63 +7,13 @@ const api = axios.create({
 });
 
 export default function HomePage() {
+  // const [cvFiles, setCvFiles] = useState(['cv_1.pdf', 'cv_2.pdf']);
+  const [formFiles, setFormFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [cvInput, setCvInput] = useState('');
   const [showInput, setShowInput] = useState(false);
   const [columns, setColumns] = useState([]);
-  const [formFilesByFolder, setFormFilesByFolder] = useState({
-    uploads: [],
-    resume_parser: [],
-    jd_quantifier: [],
-    grader_summarizer: [],
-    decision_maker: [],
-  });
-
-  const folderList = [
-    { name: 'uploads', label: '📤 Uploads' },
-    { name: 'resume_parser', label: '📄 Resume Parser' },
-    { name: 'jd_quantifier', label: '📊 JD Quantifier' },
-    { name: 'grader_summarizer', label: '📝 Grader Summarizer' },
-    { name: 'decision_maker', label: '🤖 Decision Maker' },
-  ];
-
-  function FolderSection({ folder, files, selectedFile, onFileSelect }) {
-    const isUploads = folder.name === 'uploads';
-    return (
-      <div className="mb-6">
-        <h2 className="font-bold text-indigo-600 text-md mb-2">{folder.label}</h2>
-        {isUploads && (
-          <>
-            <button
-              onClick={() => document.getElementById(`upload-${folder.name}`).click()}
-              className="mb-2 text-sm text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded"
-            >
-              Upload File
-            </button>
-            <input
-              id={`upload-${folder.name}`}
-              type="file"
-              accept=".xlsx,.xls,.pdf"
-              hidden
-              onChange={(e) => onFileSelect(e, folder.name)}
-            />
-          </>
-        )}
-        {files[folder.name]?.map((file) => (
-          <div
-            key={file}
-            onClick={() => onFileSelect({ target: { files: [new File([], file)] } }, folder.name, file)}
-            className={`p-2 mb-2 cursor-pointer rounded transition ${
-              selectedFile === file ? 'bg-green-100 font-semibold text-green-800' : 'hover:bg-gray-100'
-            }`}
-          >
-            {file}
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {
@@ -76,8 +26,12 @@ export default function HomePage() {
     }
   };
 
-  const handleFileChange = async (e, folderName, fileNameOverride = null) => {
-    const file = fileNameOverride ? new File([], fileNameOverride) : e.target.files[0];
+  const handleUpload = (type) => {
+    document.getElementById('formUpload').click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
     if (!file) return;
 
     const formData = new FormData();
@@ -88,10 +42,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       alert('✅ Upload thành công');
-      setFormFilesByFolder((prev) => ({
-        ...prev,
-        [folderName]: [...(prev[folderName] || []), file.name],
-      }));
+      setFormFiles([...formFiles, file.name]);
       setSelectedFile(file.name);
     } catch (err) {
       console.error(err);
@@ -99,12 +50,13 @@ export default function HomePage() {
     }
   };
 
-  const fetchColumns = async (filename, folderName = 'uploads') => {
+  const fetchColumns = async (filename) => {
     try {
       const res = await api.get('/file/excel/get-columns', {
         params: {
-          subpath: folderName,
-          filename,
+          subpath: 'uploads',
+          filename: filename,
+          // sheet_name: 'Sheet1'  // nếu cần
         }
       });
       return res.data.columns;
@@ -115,11 +67,20 @@ export default function HomePage() {
     }
   };
 
+  const handleSelectFile = async (file) => {
+    setSelectedFile(file);
+    const cols = await fetchColumns(file);
+    setColumns(cols);
+  };
+  
+
   const removeUnselectedColumns = async (filename, allColumns, selected) => {
+    // const toRemove = allColumns.filter((col) => !selected.includes(col));
+    console.log(selected);
     try {
       const res = await api.post(
         '/file/excel/select-columns',
-        null,
+        null,  // Không có body
         {
           params: {
             subpath: 'uploads',
@@ -128,6 +89,7 @@ export default function HomePage() {
           },
         }
       );
+      console.log(res.data);
       return res.data.new_file_path;
     } catch (err) {
       console.error(err);
@@ -153,19 +115,64 @@ export default function HomePage() {
     }
   };
 
+  // const handleFinish = async () => {
+  //   if (!selectedFile) {
+  //     alert('❗ Vui lòng chọn một file');
+  //     return;
+  //   }
+
+  //   const allCols = await fetchColumns(selectedFile);
+  //   if (!allCols.length) return;
+
+  //   const newPath = await removeUnselectedColumns(selectedFile, allCols, selectedCategories);
+  //   if (!newPath) return;
+
+  //   await parseAll(selectedFile); // hoặc newPath.split('/').pop() nếu file được tạo mới
+  // };
+
+
+
+
   return (
     <div className="flex h-screen font-sans bg-gradient-to-br from-[#f8f9fa] to-[#e0f7fa] text-gray-800">
       {/* Sidebar Storage */}
       <aside className="w-1/4 border-r border-gray-300 bg-white p-4 overflow-y-auto">
-        {folderList.map((folder) => (
-          <FolderSection
-            key={folder.name}
-            folder={folder}
-            files={formFilesByFolder}
-            selectedFile={selectedFile}
-            onFileSelect={handleFileChange}
-          />
+        <h2 className="font-bold text-green-600 text-lg mb-2">📤 Uploads</h2>
+        <button
+          onClick={() => handleUpload('Form')}
+          className="mb-3 text-sm text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded"
+        >
+          Upload Form
+        </button>
+        <input id="formUpload" type="file" accept=".xlsx,.xls" hidden onChange={handleFileChange} />
+        {formFiles.map((file) => (
+          <div
+            key={file}
+            onClick={() => handleSelectFile(file)}
+            className={`p-2 mb-2 cursor-pointer rounded transition ${
+              selectedFile === file ? 'bg-green-100 font-semibold text-green-800' : 'hover:bg-gray-100'
+            }`}
+          >
+            {file}
+          </div>
         ))}
+        
+        <hr className="my-4" />        
+        
+        <h2 className="font-bold text-indigo-600 text-lg mb-2">📄 Resume Parser</h2>
+        
+
+        <hr className="my-4" />        
+        
+        <h2 className="font-bold text-indigo-600 text-lg mb-2">📊 JD Quantifier</h2>
+
+        <hr className="my-4" />        
+        
+        <h2 className="font-bold text-indigo-600 text-lg mb-2">📝 Grader Summarizer</h2>
+      
+        <hr className="my-4" />        
+        
+        <h2 className="font-bold text-indigo-600 text-lg mb-2">🤖 Decision Maker</h2>
       </aside>
 
       {/* Main Panel */}
@@ -188,9 +195,24 @@ export default function HomePage() {
               {col}
             </label>
           ))}
-          
+
+          {/* Textarea - nhập tiêu chí muốn trích từ CV */}
+          <div className="mt-6">
+            <h4 className="mb-2 text-md font-medium text-purple-600">
+              ✍️ Nhập các tiêu chí cần trích xuất từ CV:
+            </h4>
+            <textarea
+              rows={4}
+              className="w-full p-3 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
+              placeholder="Ví dụ: Python, React, Thuyết trình, Quản lý thời gian..."
+              value={cvInput}
+              onChange={(e) => setCvInput(e.target.value)}
+            ></textarea>
+          </div>
+
           {/* Nút Hoàn tất chỉ hiện khi đủ dữ liệu */}
-          {selectedCategories.length > 0 && (
+          {selectedCategories.length > 0 && cvInput.trim() !== '' && (
+          <>
             <button
               onClick={async () => {
               if (!selectedCategories.includes('CV') && cvInput.trim() !== '') {
@@ -217,36 +239,21 @@ export default function HomePage() {
             >
               ✅ Hoàn tất
             </button>
-          )}
 
-          {/* Textarea - nhập tiêu chí muốn trích từ CV */}
-          <div className="mt-6">
-            <h4 className="mb-2 text-md font-medium text-purple-600">
-              ✍️ Nhập các tiêu chí cần trích xuất từ CV:
-            </h4>
-            <textarea
-              rows={4}
-              className="w-full p-3 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
-              placeholder="Ví dụ: Python, React, Thuyết trình, Quản lý thời gian..."
-              value={cvInput}
-              onChange={(e) => setCvInput(e.target.value)}
-            ></textarea>
-          </div>
-          {cvInput.trim() !== '' && (
             <button
-            onClick={() => {
-              if (!selectedFile) {
-                alert('❗ Vui lòng chọn một file');
-                return;
-              }
-              parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
-            }}
-            className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
+              onClick={() => {
+                if (!selectedFile) {
+                  alert('❗ Vui lòng chọn một file');
+                  return;
+                }
+                parseAll(selectedFile); // hoặc file đã xử lý nếu có đường dẫn cụ thể hơn
+              }}
+              className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow"
             >
-            🚀 Parse All
+              🚀 Parse All
             </button>
-            )
-          }
+          </>
+        )}
 
         </div>
       </main>
