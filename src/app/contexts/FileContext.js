@@ -134,7 +134,7 @@ export const FileProvider = ({ children }) => {
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', file);
+      link.setAttribute('download', actualFilename);
       document.body.appendChild(link);
       link.click();
       link.remove();
